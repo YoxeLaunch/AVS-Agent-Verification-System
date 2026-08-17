@@ -5,7 +5,7 @@
 ### Capa de verificación y certificación del ecosistema (Verificabilidad Comercial & Local-First)
 
 [![Fase 0](https://img.shields.io/badge/FASE-0%20EN%20CURSO-FF6D00?style=for-the-badge)]()
-[![Tests Passed](https://img.shields.io/badge/TESTS-13%2F13%20PASSED-00C853?style=for-the-badge&logo=pytest&logoColor=white)]()
+[![Tests Passed](https://img.shields.io/badge/TESTS-29%2F29%20PASSED-00C853?style=for-the-badge&logo=pytest&logoColor=white)]()
 [![Par de EMS](https://img.shields.io/badge/PAR%20DE-EMS-0288D1?style=for-the-badge)]()
 [![Privacy Local-First](https://img.shields.io/badge/PRIVACY-LOCAL--FIRST-00C853?style=for-the-badge)]()
 
@@ -77,12 +77,12 @@ AVS traslada ese patrón a software: no demuestra que el ecosistema dice la verd
 
 ## 🔧 Los Tres Componentes
 
-Decididos en [D-03] del log. **El Auditor está implementado (v0.1.0, 13/13 tests); los otros dos, decididos.**
+Decididos en [D-03] del log. **El Auditor está implementado (v0.1.0, 29/29 tests: cadena de custodia de EMS + citas RAG de Magnus); el harness de evaluación continua sigue decidido, sin construir.**
 
 | # | Componente | Qué hace | Criterio de hecho |
 |:---:|:---|:---|:---|
 | 1 | **Harness de evaluación continua** | Goldens por dominio y métricas de faithfulness / citation-integrity corriendo como gates de CI sobre los tres hermanos | Un cambio que degrade una métrica no pasa sin quedar registrado |
-| 2 | **El Auditor** | CLI que *recomputa* en vez de confiar: cadena de custodia de EMS (events, bloque a bloque), provenance de citas de Magnus (chunk-hash + snapshot del wiki), legalidad de transiciones de tier | Dada una DB de EMS y una respuesta de Magnus, emite veredicto verificable: OK, o violación con la evidencia exacta |
+| 2 | **El Auditor** | CLI que *recomputa* en vez de confiar: cadena de custodia de EMS (events, bloque a bloque) ✅, provenance de citas de Magnus (chunk-hash + snapshot del wiki) ✅, legalidad de transiciones de tier ✅ | Dada una DB de EMS y una traza de Magnus, emite veredicto verificable: OK, o violación con la evidencia exacta |
 | 3 | **Matriz de mapeo a estándares** | NIST AI RMF / ISO 42001 control por control, apuntando cada control a un artefacto real (constitución Magnus, privacy.yaml, logs append-only, trazas JSONL) | Un auditor externo ubica cada control apuntando a un artefacto existente en disco |
 
 ---
@@ -113,11 +113,12 @@ Los niveles 1–3 son técnicos, locales y construibles ya. Los niveles 4–5 so
 
 ## 📊 Estado del Proyecto
 
-Fundado e inaugurado el **2026-08-16**: El Auditor (T-01) implementado el mismo día, con 13/13 tests offline contra memorias reales de EMS. Decisiones y preguntas abiertas en `COLABORACION.md`.
+Fundado e inaugurado el **2026-08-16**: El Auditor (T-01) implementado el mismo día, con 13/13 tests offline contra memorias reales de EMS. El **2026-08-17** (T-02) se extendió con verificación de citas RAG de Magnus (chunk-hash + snapshot), llegando a 29/29 tests. Decisiones y preguntas abiertas en `COLABORACION.md`.
 
 | Componente | Estado |
 |:---|:---|
-| El Auditor (CLI de verificación) | ✅ Implementado — v0.1.0, 13/13 tests |
+| El Auditor — cadena de custodia EMS | ✅ Implementado — v0.1.0, `audit-ems` |
+| El Auditor — citas RAG de Magnus | ✅ Implementado — v0.1.0, `audit-magnus` |
 | Harness de evaluación continua | ⏳ Decidido ([D-03]) |
 | Matriz de mapeo a estándares | ✅ Borrador v0.1 — `docs/01-MATRIZ-NIST-AI-RMF.md` (12✅/1⚠️/1❌) |
 
@@ -126,15 +127,28 @@ Fundado e inaugurado el **2026-08-16**: El Auditor (T-01) implementado el mismo 
 ```bash
 python -m avs.cli audit-ems ruta/a/ems.db        # veredicto legible
 python -m avs.cli audit-ems ruta/a/ems.db --json # veredicto máquina
+
+python -m avs.cli audit-magnus ruta/a/trazas ruta/a/LLM-Wiki/wiki        # veredicto legible
+python -m avs.cli audit-magnus ruta/a/trazas ruta/a/LLM-Wiki/wiki --json # veredicto máquina
 # exit 0 = íntegro · 1 = violaciones · 2 = error de uso (contrato para CI)
 ```
 
-Verifica por recomputación, en modo solo lectura y sin importar nada de
-EMS ([D-04]): tipos de evento cerrados, eventos sin huérfanos, origen
-auditable de cada claim, transiciones legales re-derivadas evento a
-evento, sucesión bidireccional, y estado final derivable (la fila coincide
-con lo que la cadena deriva — un UPDATE directo a la tabla produce
-exactamente esa señal). La demo con memoria adulterada vive en `demo/`.
+`audit-ems` verifica por recomputación, en modo solo lectura y sin
+importar nada de EMS ([D-04]): tipos de evento cerrados, eventos sin
+huérfanos, origen auditable de cada claim, transiciones legales
+re-derivadas evento a evento, sucesión bidireccional, y estado final
+derivable (la fila coincide con lo que la cadena deriva — un UPDATE
+directo a la tabla produce exactamente esa señal). La demo con memoria
+adulterada vive en `demo/`.
+
+`audit-magnus` verifica, también por recomputación y sin importar código
+de Magnus, que cada cita de una traza JSONL (`MAGNUS_TRACE_DIR`) resuelve
+a un chunk real de la wiki actual: recalcula el hash del pasaje citado y
+el snapshot_id de la wiki con el mismo algoritmo que Magnus usa al
+indexar, y reporta cualquier discrepancia — hash falsificado, fuente
+inexistente, chunk_id que el troceo actual no produce, o simple deriva
+(la nota cambió desde que se citó, señal que se reporta como advertencia,
+no violación).
 
 ---
 

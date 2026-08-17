@@ -234,6 +234,6 @@ def test_cli_como_proceso(memoria):
     raiz = Path(__file__).resolve().parents[1]
     r = subprocess.run(
         [sys.executable, "-m", "avs.cli", "audit-ems", str(db)],
-        capture_output=True, text=True, cwd=raiz)
+        capture_output=True, text=True, encoding="utf-8", cwd=raiz)
     assert r.returncode == 0, r.stderr
     assert "ÍNTEGRO" in r.stdout

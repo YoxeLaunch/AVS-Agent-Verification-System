@@ -43,6 +43,7 @@ y la wiki LLM-WIKI/IMPERNO).
 | ID | Tarea | Dueño | Estado | Notas |
 |---|---|---|---|---|
 | T-01 | Vertical slice del Auditor: dada una DB de EMS, recomputar la cadena de custodia (events → claims) y verificar FK, legalidad de transiciones de tier y bidireccionalidad de sucesión | ZCode | **completada** | 13/13 tests; [P-01] resuelta de facto: lectura cruda (ver entrada de cierre) |
+| T-02 | Fix de bug real (UnicodeEncodeError del CLI en subprocesos de Windows) + segunda mitad del Auditor: dada una traza JSONL de Magnus y la raíz de la wiki, recomputar chunk-hash y snapshot_id, y verificar cada cita | ZCode | **completada** | 29/29 tests (13 EMS + 16 Magnus); ver entrada de cierre |
 
 ## Tablero de estado
 
@@ -53,11 +54,11 @@ y la wiki LLM-WIKI/IMPERNO).
 
 | Participante | Trabajando ahora | Esperando de | Libre para tomar |
 |---|---|---|---|
-| ZCode | — (sesión cerrada: T-01/El Auditor completo) | Humano: decidir siguiente componente | Componente 1 (harness CI — depende de [P-02]/[P-03]), componente 3 (matriz NIST — documental) |
+| ZCode | — (sesión cerrada: T-02/mitad Magnus del Auditor completa) | Humano: decidir siguiente componente | Componente 1 (harness CI — depende de [P-02]/[P-03]), componente 3 (matriz NIST — ya en borrador, revisar) |
 | ChatGPT | — | — | Revisión del alcance fundacional + del Auditor ya construido (bloque de handoff abajo) |
 | Humano | — | — | Responder [P-02]..[P-04]; pegar handoff a ChatGPT |
 
-_Última actualización: 2026-08-16 por ZCode (T-01 completa: AuditorEMS + CLI, 13/13)._
+_Última actualización: 2026-08-17 por ZCode (T-02 completa: fix Unicode del CLI + AuditorMagnus, 29/29)._
 
 ## Registro
 
@@ -200,6 +201,55 @@ matriz NIST, construida de forma independiente, converge con el roadmap
 propio del ecosistema en exactamente sus dos gaps conocidos — validación
 cruzada de ambas listas. Pendiente: [P-02]..[P-04]; el componente 1 es el
 único bloque restante de [D-03].
+
+— fin de la entrada —
+
+### 2026-08-17 — De: ZCode — Checkpoint de cierre: T-02 completa, fix de CLI + mitad Magnus del Auditor (29/29)
+
+**Bug real encontrado y corregido:** `pytest` en Windows daba 12/13 —
+`test_cli_como_proceso` fallaba con `UnicodeEncodeError` porque
+`avs/cli.py` imprime `⚖`/`✅`/`❌`/`⚠️` y el stdout de un subproceso en
+Windows cae al codepage `cp1252`, que no puede codificarlos. Fix en
+`avs/cli.py`: `_forzar_utf8_en_stdio()` reconfigura `sys.stdout`/`stderr`
+a UTF-8 al inicio de `main()` (guardado con `getattr(...,
+"reconfigure", None)`, `errors="replace"`). Es multiplataforma, no un
+parche Windows-only — en Linux/macOS es esencialmente un no-op. También
+hubo que decirle a `subprocess.run(..., encoding="utf-8")` en el test que
+decodifique la salida como UTF-8 (el padre también caía a `cp1252` al
+leer). 13/13 en verde tras el fix.
+
+**Qué se construyó** (`avs/auditor_magnus.py`, wiring en `avs/cli.py`,
+`tests/test_auditor_magnus.py`): segunda mitad del Componente 2 [D-03] —
+provenance de citas de Magnus. `AuditorMagnus` reimplementa literalmente
+(sin importar Magnus, [D-04]) el algoritmo de
+`MagnusAgent/kernel/rag/file_store.py` (`_sha`, `_index_document`,
+`ingest`) para recomputar, desde la wiki actual: el hash de cada chunk
+citado y el snapshot_id. Dada una traza JSONL (`MAGNUS_TRACE_DIR`) y la
+raíz de la wiki, verifica cada línea/cita: JSON válido, forma de
+`conocimiento.chunks`/`version`, `chunk_id` con formato `<fuente>#<idx>`,
+fuente existente, chunk_id producido por el troceo real, y hash
+coincidente. **Severidad contextual** para `hash_no_coincide`: si el
+snapshot ya no coincidía (la wiki cambió legítimamente desde la cita), el
+mismatch de hash baja a `advertencia`; si el snapshot coincide pero el
+hash no, es `violacion` — señal fuerte de manipulación. Nuevo subcomando
+`avs audit-magnus <trace> <wiki_root> [--json]`, mismo contrato de exit
+codes (0/1/2) que `audit-ems`.
+
+**Tests (16 nuevos, 29/29 en total, offline):** a diferencia de los de
+EMS, estos NO dependen de que MagnusAgent esté presente como hermano —
+las fixtures (wiki miniatura + traza) se construyen con el propio
+`recomputar_wiki()` del auditor, reutilizado también como función de
+módulo para no duplicar el algoritmo en los tests. Dos familias: traza
+genuina audita íntegra + solo-lectura/determinismo; y 7 escenarios de
+manipulación/deriva (hash falsificado, deriva real de snapshot que baja
+la severidad del hash, fuente inexistente, chunk_id inexistente, formato
+de chunk_id inválido, línea JSONL corrupta que no aborta las demás,
+entrada sin `conocimiento`). Más errores de uso y tests de CLI (exit
+codes, `--json`, subprocess).
+
+**Pendiente / esperando:** [P-02]..[P-04] siguen abiertas. Siguientes
+naturales: componente 1 (harness de evaluación — depende de [P-02]/[P-03])
+o revisar/profundizar el borrador de la matriz NIST (componente 3).
 
 — fin de la entrada —
 
