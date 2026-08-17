@@ -92,8 +92,8 @@ Decididos en [D-03] del log. **El Auditor está implementado (v0.1.0, 29/29 test
 | Nivel | Qué garantiza | Marco típico | Estado |
 |:---:|:---|:---|:---|
 | 1 | Evaluación funcional: que funciona y *sigue* funcionando | Goldens + métricas en CI | ⏳ Sembrado en los hermanos (460 tests combinados) |
-| 2 | Verificación estructural: evidencia íntegra y rastreable | Recomputación de hash-chains y provenance | ✅ **Implementado (T-01 — El Auditor)** |
-| 3 | Gobernanza de IA: proceso gestionado y responsable | NIST AI RMF, ISO/IEC 42001 | ⏳ Los artefactos ya existen; falta la matriz |
+| 2 | Verificación estructural: evidencia íntegra y rastreable | Recomputación de hash-chains y provenance | ✅ **Implementado (T-01 y T-02 — El Auditor: EMS + Magnus)** |
+| 3 | Gobernanza de IA: proceso gestionado y responsable | NIST AI RMF, ISO/IEC 42001 | ✅ **Borrador v0.1 (`docs/01-MATRIZ-NIST-AI-RMF.md`)** |
 | 4 | Seguridad de datos | ISO 27001, SOC 2 Type II | 🔒 Solo con producto y datos de terceros |
 | 5 | Regulatorio por mercado | EU AI Act; Ley 172-13 RD | 🔒 Según mercado objetivo |
 
@@ -125,9 +125,14 @@ Fundado e inaugurado el **2026-08-16**: El Auditor (T-01) implementado el mismo 
 ### Uso rápido
 
 ```bash
+# Ejecutar suite de pruebas
+python -m pytest
+
+# Auditoría de EMS (cadena de custodia SQLite)
 python -m avs.cli audit-ems ruta/a/ems.db        # veredicto legible
 python -m avs.cli audit-ems ruta/a/ems.db --json # veredicto máquina
 
+# Auditoría de Magnus (citas RAG contra wiki)
 python -m avs.cli audit-magnus ruta/a/trazas ruta/a/LLM-Wiki/wiki        # veredicto legible
 python -m avs.cli audit-magnus ruta/a/trazas ruta/a/LLM-Wiki/wiki --json # veredicto máquina
 # exit 0 = íntegro · 1 = violaciones · 2 = error de uso (contrato para CI)
