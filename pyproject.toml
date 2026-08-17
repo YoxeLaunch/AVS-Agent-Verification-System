@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "avs-agent-verification-system"
+version = "0.1.0"
+description = "AVS — Agent Verification System: capa de verificación y certificación del ecosistema (EMS, MagnusAgent, LLM-WIKI)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+avs = "avs.cli:main"
+
+[tool.setuptools]
+packages = ["avs"]

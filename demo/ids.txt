@@ -1,0 +1,3 @@
+alergia=e133fe8d46afd9a027513b3cc6c5cbce
+original=ccb63c2e51c46bce8df859d0d15354dc
+nuevo=19acc507b59a00e7f5caead5ee01062a
